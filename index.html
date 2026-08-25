@@ -1,0 +1,303 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cartisim Braja</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { 
+      width: 100vw; 
+      height: 100vh; 
+      overflow: hidden; 
+      background: #e2e8f0; 
+      font-family: system-ui, -apple-system, sans-serif; 
+      cursor: pointer; 
+      user-select: none;
+    }
+    #info { 
+      position: absolute; 
+      top: 30px; 
+      width: 100%; 
+      text-align: center; 
+      color: #1e293b; 
+      pointer-events: none; 
+      z-index: 10;
+      transition: opacity 0.5s ease;
+    }
+    #info h1 { font-size: 1.8rem; margin-bottom: 6px; font-weight: 700; }
+    #info p { font-size: 1rem; color: #64748b; transition: opacity 0.3s; }
+    
+    #descargar {
+      display: none;
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 20;
+      padding: 12px 20px;
+      border: 0;
+      border-radius: 999px;
+      background: #c59b27;
+      color: #ffffff;
+      font: 700 0.95rem system-ui, sans-serif;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: 0 8px 24px rgb(15 23 42 / 0.2);
+      transition: background 0.2s, transform 0.2s;
+    }
+    #descargar.visible { display: inline-block; }
+    #descargar:hover { background: #a9821d; transform: scale(1.05); }
+    body.finalizado #info { opacity: 0; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+</head>
+<body>
+
+  <div id="info">
+    <h1 id="titulo">Cartis Brajá</h1>
+    <p id="subtitulo">(Haz clic para abrir el sobre)</p>
+  </div>
+  <a id="descargar" aria-label="Descargar imagen">Descargar imagen</a>
+
+  <script>
+    // 1. Obtener nombre desde la URL (?nombre=emma)
+    const urlParams = new URLSearchParams(window.location.search);
+    const nombresDisponibles = {
+      davidg: 'David G.jpg',
+      davidm: 'David m.jpg',
+      elisa: 'Elisa.jpg',
+      emma: 'Emma.jpg',
+      fran: 'Fran.jpg',
+      hadasa: 'Hadasa.jpg',
+      hanna: 'Hanna.jpg',
+      iair: 'Iair.jpg',
+      lipe: 'Lipe.jpg',
+      margarita: 'Margarita.jpg',
+      mila: 'Mila.jpg',
+      mili: 'Mili.jpg',
+      nao: 'Nao.jpg',
+      natan: 'Natan.jpg',
+      rafas: 'Rafa s.jpg',
+      rafat: 'Rafa T.jpg',
+      shai: 'Shai.jpg',
+      sophie: 'Sophie.jpg',
+      theila: 'Theila.jpg',
+      valen: 'Valen.jpg'
+    };
+    const nombre = urlParams.get('nombre') || 'emma';
+    const claveNombre = nombre.toLowerCase();
+    const etiquetasVisibles = {
+      davidg: 'David G',
+      davidm: 'David M',
+      elisa: 'Elisa',
+      emma: 'Emma',
+      fran: 'Fran',
+      hadasa: 'Hadasa',
+      hanna: 'Hanna',
+      iair: 'Iair',
+      lipe: 'Lipe',
+      margarita: 'Margarita',
+      mila: 'Mila',
+      mili: 'Mili',
+      nao: 'Nao',
+      natan: 'Natan',
+      rafas: 'Rafa S',
+      rafat: 'Rafa T',
+      shai: 'Shai',
+      sophie: 'Sophie',
+      theila: 'Theila',
+      valen: 'Valen'
+    };
+    const fotoUrl = `imagenes/${nombresDisponibles[claveNombre] || `${nombre}.jpg`}`;
+
+    const nombreVisible = etiquetasVisibles[claveNombre] || nombre;
+    document.getElementById('titulo').innerText = `Cartis Brajá de ${nombreVisible}`;
+
+    const botonDescarga = document.getElementById('descargar');
+    botonDescarga.addEventListener('click', (e) => e.stopPropagation());
+
+    // 2. Escena, Cámara y Renderizador
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, 8.5);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
+
+    // Iluminación
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    dirLight.position.set(3, 5, 4);
+    scene.add(dirLight);
+
+    // Contenedor principal
+    const envelopeGroup = new THREE.Group();
+    envelopeGroup.rotation.x = 0.08;
+    scene.add(envelopeGroup);
+
+    // Materiales
+    const outerMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.FrontSide, roughness: 0.4 });
+    const flapOuterMat = new THREE.MeshStandardMaterial({ color: 0xffffff, side: THREE.DoubleSide, roughness: 0.4 });
+    const innerMat = new THREE.MeshStandardMaterial({ color: 0xe2d9cc, side: THREE.DoubleSide, roughness: 0.5 });
+    const sealMat = new THREE.MeshStandardMaterial({ color: 0xc59b27, metalness: 0.5, roughness: 0.3 });
+
+    // 3. Carga de la Tarjeta y Construcción Dinámica del Sobre
+    const textureLoader = new THREE.TextureLoader();
+    let animado = false;
+
+    textureLoader.load(
+      fotoUrl,
+      (texture) => {
+        const imageAspect = texture.image.width / texture.image.height;
+        const maxPhotoWidth = 3.2;
+        const maxPhotoHeight = 2.4;
+        const photoWidth = Math.min(maxPhotoWidth, maxPhotoHeight * imageAspect);
+        const photoHeight = photoWidth / imageAspect;
+        const framePadding = 0.1;
+        const cardWidth = photoWidth + framePadding * 2;
+        const cardHeight = photoHeight + framePadding * 2;
+
+        const envWidth = Math.max(4.2, cardWidth + 0.6);
+        const envHeight = cardHeight + 0.8; 
+
+        // A) Fondo Trasero del Sobre (z = 0)
+        const backGeo = new THREE.PlaneGeometry(envWidth, envHeight);
+        const backMesh = new THREE.Mesh(backGeo, innerMat);
+        envelopeGroup.add(backMesh);
+
+        // B) Bolsillo Frontal (z = 0.02)
+        const frontHeight = envHeight * 0.6;
+        const frontGeo = new THREE.PlaneGeometry(envWidth, frontHeight);
+        const frontMesh = new THREE.Mesh(frontGeo, outerMat);
+        const frontY = -(envHeight / 2) + (frontHeight / 2);
+        frontMesh.position.set(0, frontY, 0.02);
+        envelopeGroup.add(frontMesh);
+
+        // C) Solapa Superior (Inicialmente z = 0.03)
+        const flapGroup = new THREE.Group();
+        const topY = envHeight / 2;
+        flapGroup.position.set(0, topY, 0.03); 
+
+        const flapHeight = envHeight * 0.55;
+        const flapGeo = new THREE.PlaneGeometry(envWidth, flapHeight);
+        flapGeo.translate(0, -flapHeight / 2, 0);
+        const flapMesh = new THREE.Mesh(flapGeo, flapOuterMat);
+        flapGroup.add(flapMesh);
+
+        // Sello dorado
+        const sealGeo = new THREE.CircleGeometry(0.22, 32);
+        const sealMesh = new THREE.Mesh(sealGeo, sealMat);
+        sealMesh.position.set(0, -flapHeight + 0.1, 0.005);
+        flapGroup.add(sealMesh);
+
+        envelopeGroup.add(flapGroup);
+
+        // D) Tarjeta con Marco Blanco
+        const cardGroup = new THREE.Group();
+
+        const frameGeo = new THREE.PlaneGeometry(cardWidth, cardHeight);
+        const frameMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        cardGroup.add(new THREE.Mesh(frameGeo, frameMat));
+
+        const photoGeo = new THREE.PlaneGeometry(photoWidth, photoHeight);
+        const photoMat = new THREE.MeshBasicMaterial({ map: texture });
+        const photoMesh = new THREE.Mesh(photoGeo, photoMat);
+        photoMesh.position.z = 0.002;
+        cardGroup.add(photoMesh);
+
+        // Posición inicial (z = 0.01)
+        const cardStartY = -(envHeight / 2) + (cardHeight / 2) + 0.1;
+        cardGroup.position.set(0, cardStartY, 0.01);
+        cardGroup.visible = false;
+        envelopeGroup.add(cardGroup);
+
+        botonDescarga.href = fotoUrl;
+        botonDescarga.download = nombresDisponibles[nombre.toLowerCase()] || `${nombre}.jpg`;
+
+        // 4. Animación al hacer Clic
+        window.addEventListener('click', () => {
+          if (animado) return;
+          animado = true;
+
+          document.getElementById('subtitulo').style.opacity = '0';
+          cardGroup.visible = true;
+
+          const tl = gsap.timeline();
+
+          // 1º Abrir solapa y llevarla al plano trasero (z = -0.01)
+          tl.to(flapGroup.rotation, {
+            x: Math.PI,
+            duration: 0.7,
+            ease: "power2.inOut"
+          })
+          .to(flapGroup.position, {
+            z: -0.01,
+            duration: 0.2,
+            ease: "power1.out"
+          }, "-=0.25")
+          // 2º La tarjeta sube pasando por delante de la solapa ya abierta
+          .to(cardGroup.position, {
+            y: (frontY + frontHeight / 2) + (cardHeight / 2) + 0.2,
+            duration: 0.8,
+            ease: "power2.out"
+          }, "-=0.1")
+          // 3º Traer la tarjeta al frente absoluto
+          .to(cardGroup.position, {
+            z: 0.1,
+            duration: 0.3
+          }, "-=0.2")
+          // 4º Centrar y escalar a pantalla completa
+          .to(cardGroup.position, {
+            x: 0,
+            y: 0,
+            duration: 0.8,
+            ease: "power3.inOut"
+          }, "-=0.1")
+          .to(cardGroup.scale, {
+            x: getFullImageScale(cardWidth, cardHeight),
+            y: getFullImageScale(cardWidth, cardHeight),
+            duration: 1.0,
+            ease: "power3.inOut",
+            onComplete: () => {
+              document.body.classList.add('finalizado');
+              botonDescarga.classList.add('visible');
+            }
+          });
+        });
+
+        function getFullImageScale(width, height) {
+          const distance = camera.position.z - cardGroup.position.z;
+          const viewportHeight = 2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * distance;
+          const viewportWidth = viewportHeight * camera.aspect;
+          return Math.min(viewportWidth / width, viewportHeight / height) * 0.92;
+        }
+      },
+      undefined,
+      (err) => {
+        console.error("Error al cargar la imagen:", err);
+        document.getElementById('subtitulo').innerHTML = `<span style="color:red">No se encontró la foto: <b>imagenes/${nombre}.jpg</b></span>`;
+      }
+    );
+
+    // Render loop y responsive
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
+
